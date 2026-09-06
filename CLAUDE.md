@@ -10,7 +10,9 @@ later steps; don't assume missing functionality is a bug unless asked to impleme
 
 Note: the git repo root is this directory (`expense-tracker/expense-tracker` relative to the
 outer folder it was unzipped into). The outer parent directory is not part of the project — it
-only exists because this folder was extracted from a zip.
+only exists because this folder was extracted from a zip. Always start Claude Code (and run
+git) from this inner directory — the slash commands in `.claude/commands/` use paths relative to
+it (`database/db.py`, `.claude/specs/`), and git commands fail outright from the outer folder.
 
 ## Commands
 
