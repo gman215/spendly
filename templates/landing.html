@@ -2,6 +2,66 @@
 
 {% block title %}Spendly — Track Every Rupee{% endblock %}
 
+{% block head %}
+<style>
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 15, 15, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    z-index: 1000;
+}
+
+.modal-overlay[hidden] { display: none; }
+
+.modal-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    background: var(--paper-card);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+
+.modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(15, 15, 15, 0.06);
+    color: var(--ink);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 1;
+    transition: background 0.2s;
+}
+
+.modal-close:hover { background: rgba(15, 15, 15, 0.12); }
+
+.modal-video-wrap {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%;
+}
+
+.modal-video-wrap iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 
 <section class="hero">
@@ -20,7 +80,7 @@
         </p>
         <div class="hero-actions">
             <a href="{{ url_for('register') }}" class="btn-primary">Create free account</a>
-            <a href="#" class="btn-primary">See how it works</a>
+            <a href="#" class="btn-primary" id="how-it-works-btn">See how it works</a>
         </div>
     </div>
     <div class="hero-visual">
@@ -99,4 +159,51 @@
     </div>
 </section>
 
+<div class="modal-overlay" id="how-it-works-modal" hidden>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-label="How Spendly works">
+        <button type="button" class="modal-close" id="how-it-works-close" aria-label="Close">&times;</button>
+        <div class="modal-video-wrap">
+            <iframe id="how-it-works-video"
+                    src=""
+                    title="How Spendly works"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var VIDEO_URL = "https://www.youtube.com/embed/dQw4w9WgXcQ";
+
+    var trigger = document.getElementById("how-it-works-btn");
+    var modal = document.getElementById("how-it-works-modal");
+    var closeBtn = document.getElementById("how-it-works-close");
+    var iframe = document.getElementById("how-it-works-video");
+
+    function openModal(event) {
+        event.preventDefault();
+        iframe.src = VIDEO_URL + "?autoplay=1";
+        modal.hidden = false;
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        iframe.src = "";
+    }
+
+    trigger.addEventListener("click", openModal);
+    closeBtn.addEventListener("click", closeModal);
+
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+})();
+</script>
 {% endblock %}
