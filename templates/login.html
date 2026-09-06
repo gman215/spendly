@@ -13,6 +13,10 @@
         </div>
 
         <div class="auth-card">
+            {% if logged_out %}
+            <div class="auth-success">You've been signed out.</div>
+            {% endif %}
+
             {% if registered %}
             <div class="auth-success">Account created — sign in below.</div>
             {% endif %}
@@ -26,7 +30,7 @@
                     <label for="email">Email address</label>
                     <input type="email" id="email" name="email"
                            class="form-input" placeholder="nitish@example.com"
-                           required autofocus>
+                           value="{{ email or '' }}" required autofocus>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
