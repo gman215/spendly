@@ -1,10 +1,20 @@
+import os
 import sqlite3
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash
 
-from database.db import create_user, get_db, get_user_by_email, init_db, seed_db
+from database.db import (
+    create_user,
+    get_db,
+    get_user_by_email,
+    get_user_by_id,
+    init_db,
+    seed_db,
+)
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
 
 # ------------------------------------------------------------------ #
@@ -14,6 +24,16 @@ app = Flask(__name__)
 with app.app_context():
     init_db()
     seed_db()
+
+
+# ------------------------------------------------------------------ #
+# Session helpers                                                     #
+# ------------------------------------------------------------------ #
+
+@app.context_processor
+def inject_current_user():
+    user_id = session.get("user_id")
+    return {"current_user": get_user_by_id(user_id) if user_id else None}
 
 
 # ------------------------------------------------------------------ #
@@ -56,9 +76,40 @@ def register():
     return redirect(url_for("login", registered=1))
 
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    return render_template("login.html", registered=request.args.get("registered"))
+    if request.method == "GET":
+        if session.get("user_id"):
+            return redirect(url_for("landing"))
+        return render_template(
+            "login.html",
+            registered=request.args.get("registered"),
+            logged_out=request.args.get("logged_out"),
+        )
+
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+
+    error = None
+    if not email or not password:
+        error = "Email and password are required."
+    else:
+        user = get_user_by_email(email)
+        if user is None or not check_password_hash(user["password_hash"], password):
+            error = "Incorrect email or password."
+
+    if error:
+        return render_template("login.html", error=error, email=email)
+
+    session.clear()
+    session["user_id"] = user["id"]
+    return redirect(url_for("landing"))
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login", logged_out=1))
 
 
 @app.route("/terms")
@@ -74,11 +125,6 @@ def privacy():
 # ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
-
-@app.route("/logout")
-def logout():
-    return "Logout — coming in Step 3"
-
 
 @app.route("/profile")
 def profile():
