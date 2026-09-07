@@ -1,8 +1,21 @@
+from datetime import date
+
 DEMO = {"email": "demo@spendly.com", "password": "demo123"}
 
 
 def sign_in(client):
     return client.post("/login", data=DEMO)
+
+
+def profile_section(response):
+    """Just the profile page's own markup — not base.html's nav and footer."""
+    section = response.data.split(b'class="profile-section"', 1)[1]
+    return section.split(b"</section>", 1)[0]
+
+
+def transaction_rows(response):
+    body = profile_section(response).split(b"<tbody>", 1)[1]
+    return body.split(b"</tbody>", 1)[0].count(b"<tr>")
 
 
 # ------------------------------------------------------------------ #
@@ -41,6 +54,16 @@ def test_profile_shows_the_signed_in_user(client):
     assert b"Member since" in response.data
 
 
+def test_member_since_is_a_month_and_year_not_an_iso_date(client):
+    sign_in(client)
+
+    response = client.get("/profile")
+    assert date.today().strftime("Member since %B %Y").encode() in response.data
+    assert date.today().strftime("%Y-%m-%d").encode() not in profile_section(
+        response
+    ).split(b"<tbody>", 1)[0]
+
+
 def test_profile_never_leaks_the_password_hash(client):
     sign_in(client)
 
@@ -67,8 +90,16 @@ def test_profile_shows_transaction_table(client):
 
     response = client.get("/profile")
     assert b"txn-table" in response.data
-    assert response.data.count(b"<tr>") == 9  # header row + 8 transactions
+    assert transaction_rows(response) == 8
     assert b"Electricity bill" in response.data
+
+
+def test_transaction_dates_track_the_current_month(client):
+    sign_in(client)
+
+    response = client.get("/profile")
+    this_month = date.today().strftime("%Y-%m-").encode()
+    assert profile_section(response).count(this_month) == 8
 
 
 def test_profile_shows_category_breakdown(client):
@@ -83,8 +114,8 @@ def test_profile_shows_category_breakdown(client):
 def test_profile_uses_no_hardcoded_hex_colours(client):
     sign_in(client)
 
-    body = client.get("/profile").data.split(b"<main", 1)[1]
-    assert b"#" not in body.replace(b"&#", b"")
+    section = profile_section(client.get("/profile"))
+    assert b"#" not in section.replace(b"&#", b"")
 
 
 # ------------------------------------------------------------------ #
