@@ -33,18 +33,18 @@ def test_get_login_redirects_when_signed_in(client):
 
     response = client.get("/login")
     assert response.status_code == 302
-    assert response.headers["Location"] == "/"
+    assert response.headers["Location"] == "/profile"
 
 
 # ------------------------------------------------------------------ #
 # Successful sign-in                                                   #
 # ------------------------------------------------------------------ #
 
-def test_valid_login_redirects_to_landing(client):
+def test_valid_login_redirects_to_profile(client):
     response = sign_in(client)
 
     assert response.status_code == 302
-    assert response.headers["Location"] == "/"
+    assert response.headers["Location"] == "/profile"
 
 
 def test_valid_login_stores_user_id_in_session(client):
