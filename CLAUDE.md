@@ -128,21 +128,29 @@ flowchart TD
 
 ## Implemented vs. stub routes (roadmap)
 
-Implemented (`GET`, template render): `/`, `/register`, `/login`, `/terms`, `/privacy`.
+Implemented:
+
+| Route | Methods | Notes |
+|---|---|---|
+| `/` | GET | landing page |
+| `/terms`, `/privacy` | GET | static legal pages |
+| `/register` | GET, POST | Step 2 — validates input, hashes password, creates the user |
+| `/login` | GET, POST | Step 3 — verifies the password hash, sets `session["user_id"]` |
+| `/logout` | GET | Step 3 — clears the session |
+| `/profile` | GET | Step 4 — signed-in only; real user card, hardcoded stats/transactions/categories |
 
 Stub (return a plain string, tagged with the step that's meant to implement them):
 
 | Route | Step | Notes |
 |---|---|---|
-| `/logout` | Step 3 | |
-| `/profile` | Step 4 | |
 | `/expenses/add` | Step 7 | |
 | `/expenses/<int:id>/edit` | Step 8 | |
 | `/expenses/<int:id>/delete` | Step 9 | |
 
-`database/db.py` (Step 1 — Database Setup) is a prerequisite stub too: no schema/table exists yet,
-and none of the expense routes above can be meaningfully implemented until `get_db()`/`init_db()`
-exist.
+`database/db.py` (Step 1 — Database Setup) is implemented: `get_db()`, `init_db()`, `seed_db()`,
+plus `create_user()` / `get_user_by_email()` / `get_user_by_id()`. The `users` and `expenses`
+tables exist, and `app.py` calls `init_db()` / `seed_db()` at import time. The expense routes above
+still need their own query helpers added to this module.
 
 Steps 2, 5, and 6 aren't named anywhere in the code — don't guess what they are; ask or wait for
 an explicit task before inventing routes/features to fill those gaps. When asked to implement a
