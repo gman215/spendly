@@ -37,6 +37,38 @@ def inject_current_user():
 
 
 # ------------------------------------------------------------------ #
+# Demo profile data (Step 4 — replaced by real queries in Step 5)     #
+# ------------------------------------------------------------------ #
+
+PROFILE_STATS = {
+    "total_spent": "462.66",
+    "transaction_count": 8,
+    "top_category": "Bills",
+}
+
+PROFILE_TRANSACTIONS = [
+    {"date": "2026-09-22", "description": "Charity donation", "category": "Other", "amount": "20.00"},
+    {"date": "2026-09-18", "description": "Dinner with friends", "category": "Food", "amount": "42.10"},
+    {"date": "2026-09-14", "description": "New running shoes", "category": "Shopping", "amount": "89.99"},
+    {"date": "2026-09-10", "description": "Movie tickets", "category": "Entertainment", "amount": "28.00"},
+    {"date": "2026-09-07", "description": "Pharmacy - prescription refill", "category": "Health", "amount": "32.75"},
+    {"date": "2026-09-05", "description": "Electricity bill", "category": "Bills", "amount": "120.50"},
+    {"date": "2026-09-03", "description": "Monthly metro pass", "category": "Transport", "amount": "75.00"},
+    {"date": "2026-09-01", "description": "Groceries at Trader Joe's", "category": "Food", "amount": "54.32"},
+]
+
+PROFILE_CATEGORIES = [
+    {"name": "Bills", "amount": "120.50", "percent": "26.0", "width": 100},
+    {"name": "Food", "amount": "96.42", "percent": "20.8", "width": 80},
+    {"name": "Shopping", "amount": "89.99", "percent": "19.4", "width": 75},
+    {"name": "Transport", "amount": "75.00", "percent": "16.2", "width": 62},
+    {"name": "Health", "amount": "32.75", "percent": "7.1", "width": 27},
+    {"name": "Entertainment", "amount": "28.00", "percent": "6.1", "width": 23},
+    {"name": "Other", "amount": "20.00", "percent": "4.3", "width": 17},
+]
+
+
+# ------------------------------------------------------------------ #
 # Routes                                                              #
 # ------------------------------------------------------------------ #
 
@@ -112,6 +144,18 @@ def logout():
     return redirect(url_for("login", logged_out=1))
 
 
+@app.route("/profile")
+def profile():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    return render_template(
+        "profile.html",
+        stats=PROFILE_STATS,
+        transactions=PROFILE_TRANSACTIONS,
+        categories=PROFILE_CATEGORIES,
+    )
+
+
 @app.route("/terms")
 def terms():
     return render_template("terms.html")
@@ -125,11 +169,6 @@ def privacy():
 # ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
-
-@app.route("/profile")
-def profile():
-    return "Profile page — coming in Step 4"
-
 
 @app.route("/expenses/add")
 def add_expense():
