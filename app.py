@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from datetime import date, datetime
 
 from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
@@ -37,6 +38,17 @@ def inject_current_user():
 
 
 # ------------------------------------------------------------------ #
+# Template filters                                                    #
+# ------------------------------------------------------------------ #
+
+@app.template_filter("month_year")
+def month_year(value):
+    if not value:
+        return "—"
+    return datetime.strptime(value[:10], "%Y-%m-%d").strftime("%B %Y")
+
+
+# ------------------------------------------------------------------ #
 # Demo profile data (Step 4 — replaced by real queries in Step 5)     #
 # ------------------------------------------------------------------ #
 
@@ -46,15 +58,25 @@ PROFILE_STATS = {
     "top_category": "Bills",
 }
 
+# Same rows as seed_db(), newest first. Days are all <= 28 so replace() is safe
+# in February, and the dates follow date.today() instead of drifting into the past.
 PROFILE_TRANSACTIONS = [
-    {"date": "2026-09-22", "description": "Charity donation", "category": "Other", "amount": "20.00"},
-    {"date": "2026-09-18", "description": "Dinner with friends", "category": "Food", "amount": "42.10"},
-    {"date": "2026-09-14", "description": "New running shoes", "category": "Shopping", "amount": "89.99"},
-    {"date": "2026-09-10", "description": "Movie tickets", "category": "Entertainment", "amount": "28.00"},
-    {"date": "2026-09-07", "description": "Pharmacy - prescription refill", "category": "Health", "amount": "32.75"},
-    {"date": "2026-09-05", "description": "Electricity bill", "category": "Bills", "amount": "120.50"},
-    {"date": "2026-09-03", "description": "Monthly metro pass", "category": "Transport", "amount": "75.00"},
-    {"date": "2026-09-01", "description": "Groceries at Trader Joe's", "category": "Food", "amount": "54.32"},
+    {
+        "date": date.today().replace(day=day).strftime("%Y-%m-%d"),
+        "description": description,
+        "category": category,
+        "amount": amount,
+    }
+    for day, category, description, amount in [
+        (22, "Other", "Charity donation", "20.00"),
+        (18, "Food", "Dinner with friends", "42.10"),
+        (14, "Shopping", "New running shoes", "89.99"),
+        (10, "Entertainment", "Movie tickets", "28.00"),
+        (7, "Health", "Pharmacy - prescription refill", "32.75"),
+        (5, "Bills", "Electricity bill", "120.50"),
+        (3, "Transport", "Monthly metro pass", "75.00"),
+        (1, "Food", "Groceries at Trader Joe's", "54.32"),
+    ]
 ]
 
 PROFILE_CATEGORIES = [
