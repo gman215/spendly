@@ -1,13 +1,16 @@
 import os
 import sqlite3
-from datetime import date, datetime
+from datetime import datetime
 
 from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 from database.db import (
     create_user,
+    get_category_totals,
     get_db,
+    get_expense_stats,
+    get_expenses_by_user,
     get_user_by_email,
     get_user_by_id,
     init_db,
@@ -46,48 +49,6 @@ def month_year(value):
     if not value:
         return "—"
     return datetime.strptime(value[:10], "%Y-%m-%d").strftime("%B %Y")
-
-
-# ------------------------------------------------------------------ #
-# Demo profile data (Step 4 — replaced by real queries in Step 5)     #
-# ------------------------------------------------------------------ #
-
-PROFILE_STATS = {
-    "total_spent": "462.66",
-    "transaction_count": 8,
-    "top_category": "Bills",
-}
-
-# Same rows as seed_db(), newest first. Days are all <= 28 so replace() is safe
-# in February, and the dates follow date.today() instead of drifting into the past.
-PROFILE_TRANSACTIONS = [
-    {
-        "date": date.today().replace(day=day).strftime("%Y-%m-%d"),
-        "description": description,
-        "category": category,
-        "amount": amount,
-    }
-    for day, category, description, amount in [
-        (22, "Other", "Charity donation", "20.00"),
-        (18, "Food", "Dinner with friends", "42.10"),
-        (14, "Shopping", "New running shoes", "89.99"),
-        (10, "Entertainment", "Movie tickets", "28.00"),
-        (7, "Health", "Pharmacy - prescription refill", "32.75"),
-        (5, "Bills", "Electricity bill", "120.50"),
-        (3, "Transport", "Monthly metro pass", "75.00"),
-        (1, "Food", "Groceries at Trader Joe's", "54.32"),
-    ]
-]
-
-PROFILE_CATEGORIES = [
-    {"name": "Bills", "amount": "120.50", "percent": "26.0", "width": 100},
-    {"name": "Food", "amount": "96.42", "percent": "20.8", "width": 80},
-    {"name": "Shopping", "amount": "89.99", "percent": "19.4", "width": 75},
-    {"name": "Transport", "amount": "75.00", "percent": "16.2", "width": 62},
-    {"name": "Health", "amount": "32.75", "percent": "7.1", "width": 27},
-    {"name": "Entertainment", "amount": "28.00", "percent": "6.1", "width": 23},
-    {"name": "Other", "amount": "20.00", "percent": "4.3", "width": 17},
-]
 
 
 # ------------------------------------------------------------------ #
@@ -168,13 +129,46 @@ def logout():
 
 @app.route("/profile")
 def profile():
-    if not session.get("user_id"):
+    user_id = session.get("user_id")
+    if not user_id:
         return redirect(url_for("login"))
+
+    expense_stats = get_expense_stats(user_id)
+    category_rows = get_category_totals(user_id)
+    expense_rows = get_expenses_by_user(user_id, limit=10)
+
+    total_spent = expense_stats["total_spent"]
+    max_total = category_rows[0]["total"] if category_rows else 0
+
+    stats = {
+        "total_spent": f"{total_spent:.2f}",
+        "transaction_count": expense_stats["transaction_count"],
+        "top_category": category_rows[0]["category"] if category_rows else "—",
+    }
+    transactions = [
+        {
+            "date": row["date"],
+            "description": row["description"],
+            "category": row["category"],
+            "amount": f"{row['amount']:.2f}",
+        }
+        for row in expense_rows
+    ]
+    categories = [
+        {
+            "name": row["category"],
+            "amount": f"{row['total']:.2f}",
+            "percent": f"{row['total'] / total_spent * 100:.1f}" if total_spent else "0.0",
+            "width": round(row["total"] / max_total * 100) if max_total else 0,
+        }
+        for row in category_rows
+    ]
+
     return render_template(
         "profile.html",
-        stats=PROFILE_STATS,
-        transactions=PROFILE_TRANSACTIONS,
-        categories=PROFILE_CATEGORIES,
+        stats=stats,
+        transactions=transactions,
+        categories=categories,
     )
 
 

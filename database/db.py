@@ -126,3 +126,42 @@ def get_user_by_id(user_id):
     ).fetchone()
     conn.close()
     return user
+
+
+# ------------------------------------------------------------------ #
+# Expenses                                                             #
+# ------------------------------------------------------------------ #
+
+def get_expense_stats(user_id):
+    conn = get_db()
+    stats = conn.execute(
+        "SELECT COALESCE(SUM(amount), 0) AS total_spent, COUNT(*) AS transaction_count "
+        "FROM expenses WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return stats
+
+
+def get_category_totals(user_id):
+    conn = get_db()
+    totals = conn.execute(
+        "SELECT category, SUM(amount) AS total FROM expenses "
+        "WHERE user_id = ? GROUP BY category ORDER BY total DESC",
+        (user_id,),
+    ).fetchall()
+    conn.close()
+    return totals
+
+
+def get_expenses_by_user(user_id, limit=None):
+    query = "SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC, id DESC"
+    params = [user_id]
+    if limit is not None:
+        query += " LIMIT ?"
+        params.append(limit)
+
+    conn = get_db()
+    expenses = conn.execute(query, params).fetchall()
+    conn.close()
+    return expenses

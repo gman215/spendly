@@ -1,5 +1,7 @@
 from datetime import date
 
+import database.db as db
+
 DEMO = {"email": "demo@spendly.com", "password": "demo123"}
 
 
@@ -116,6 +118,80 @@ def test_profile_uses_no_hardcoded_hex_colours(client):
 
     section = profile_section(client.get("/profile"))
     assert b"#" not in section.replace(b"&#", b"")
+
+
+# ------------------------------------------------------------------ #
+# Real data                                                            #
+# ------------------------------------------------------------------ #
+
+def sign_in_new_user(client):
+    client.post(
+        "/register",
+        data={
+            "name": "Nitish Kumar",
+            "email": "nitish@example.com",
+            "password": "password123",
+        },
+    )
+    return client.post(
+        "/login", data={"email": "nitish@example.com", "password": "password123"}
+    )
+
+
+def add_demo_expense(amount, description, expense_date="2000-01-01", category="Other"):
+    user_id = db.get_user_by_email(DEMO["email"])["id"]
+    conn = db.get_db()
+    conn.execute(
+        "INSERT INTO expenses (user_id, amount, category, date, description) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (user_id, amount, category, expense_date, description),
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_new_user_sees_an_empty_profile(client):
+    sign_in_new_user(client)
+
+    response = client.get("/profile")
+    section = profile_section(response)
+    assert response.status_code == 200
+    assert b"$0.00" in section
+    assert '<span class="profile-stat-value">—</span>'.encode() in section
+    assert transaction_rows(response) == 0
+    assert section.count(b"cat-row") == 0
+
+
+def test_profile_only_shows_the_signed_in_users_expenses(client):
+    sign_in_new_user(client)
+
+    section = profile_section(client.get("/profile"))
+    assert b"Electricity bill" not in section
+    assert b"462.66" not in section
+
+
+def test_transactions_are_newest_first(client):
+    sign_in(client)
+
+    section = profile_section(client.get("/profile"))
+    assert section.index(b"Charity donation") < section.index(b"Groceries at Trader Joe")
+
+
+def test_recent_transactions_are_capped_but_the_count_is_not(client):
+    for n in range(12):
+        add_demo_expense(1.00, f"Old expense {n}")
+    sign_in(client)
+
+    response = client.get("/profile")
+    assert transaction_rows(response) == 10
+    assert b'<span class="profile-stat-value">20</span>' in profile_section(response)
+
+
+def test_total_reflects_expenses_in_the_database(client):
+    add_demo_expense(37.34, "Late bill")
+    sign_in(client)
+
+    assert b"$500.00" in profile_section(client.get("/profile"))
 
 
 # ------------------------------------------------------------------ #
