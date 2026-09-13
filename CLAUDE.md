@@ -142,13 +142,13 @@ Implemented:
 | `/register` | GET, POST | Step 2 — validates input, hashes password, creates the user |
 | `/login` | GET, POST | Step 3 — verifies the password hash, sets `session["user_id"]` and `session["user_email"]`; signed-in checks go through `get_current_user()`, which clears stale sessions |
 | `/logout` | GET | Step 3 — clears the session |
-| `/profile` | GET | Steps 4–6 — signed-in only; user card, stats, every transaction and category totals queried from `expenses`, narrowed by optional `?start_date=` / `?end_date=` (Step 6 date filter, validated by `parse_date_range()`) |
+| `/profile` | GET | Steps 4–6 — signed-in only; user card, stats, every transaction and category totals queried from `expenses`, narrowed by optional `?start_date=` / `?end_date=` (Step 6 date filter, validated by `parse_date_range()`); "Add expense" button, plus an "Expense added." notice on `?added=1` (Step 7) |
+| `/expenses/add` | GET, POST | Step 7 — signed-in only; `parse_expense_form()` validates, `create_expense()` inserts for the session user, redirects to `/profile?added=1` |
 
 Stub (return a plain string, tagged with the step that's meant to implement them):
 
 | Route | Step | Notes |
 |---|---|---|
-| `/expenses/add` | Step 7 | |
 | `/expenses/<int:id>/edit` | Step 8 | |
 | `/expenses/<int:id>/delete` | Step 9 | |
 
@@ -158,8 +158,9 @@ plus `create_user()` / `get_user_by_email()` / `get_user_by_id()`, and the Step 
 inclusive `start_date` / `end_date` ISO-string bounds (Step 6, built by `_date_range_clause()`). The
 `users` and `expenses` tables exist, and `app.py` calls `init_db()` / `seed_db()` at import time.
 The SQLite file is `expense_tracker.db` in the project root locally, or `/tmp/expense_tracker.db`
-when the `VERCEL` env var is set (chosen by `_default_db_path()`). The
-expense routes above still need their own write helpers (insert/update/delete) added to this module.
+when the `VERCEL` env var is set (chosen by `_default_db_path()`). Step 7
+added the first write helper, `create_expense()`; the edit/delete routes (Steps 8–9) still need their
+own update/delete helpers added to this module.
 
 Step 6 is the profile date filter (`.claude/specs/06-date-filter.md`). When asked to implement a
 stub route, do only that step: match the pattern of the already-implemented routes (call into
