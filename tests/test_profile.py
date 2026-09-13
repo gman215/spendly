@@ -177,13 +177,13 @@ def test_transactions_are_newest_first(client):
     assert section.index(b"Charity donation") < section.index(b"Groceries at Trader Joe")
 
 
-def test_recent_transactions_are_capped_but_the_count_is_not(client):
+def test_all_transactions_are_listed(client):
     for n in range(12):
         add_demo_expense(1.00, f"Old expense {n}")
     sign_in(client)
 
     response = client.get("/profile")
-    assert transaction_rows(response) == 10
+    assert transaction_rows(response) == 20
     assert b'<span class="profile-stat-value">20</span>' in profile_section(response)
 
 
