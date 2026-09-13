@@ -34,10 +34,22 @@ with app.app_context():
 # Session helpers                                                     #
 # ------------------------------------------------------------------ #
 
+def get_current_user():
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+
+    user = get_user_by_id(user_id)
+    if user is None or user["email"] != session.get("user_email"):
+        session.clear()
+        return None
+
+    return user
+
+
 @app.context_processor
 def inject_current_user():
-    user_id = session.get("user_id")
-    return {"current_user": get_user_by_id(user_id) if user_id else None}
+    return {"current_user": get_current_user()}
 
 
 # ------------------------------------------------------------------ #
@@ -118,7 +130,7 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
-        if session.get("user_id"):
+        if get_current_user():
             return redirect(url_for("profile"))
         return render_template(
             "login.html",
@@ -142,6 +154,7 @@ def login():
 
     session.clear()
     session["user_id"] = user["id"]
+    session["user_email"] = user["email"]
     return redirect(url_for("profile"))
 
 
@@ -153,10 +166,11 @@ def logout():
 
 @app.route("/profile")
 def profile():
-    user_id = session.get("user_id")
-    if not user_id:
+    user = get_current_user()
+    if user is None:
         return redirect(url_for("login"))
 
+    user_id = user["id"]
     start_date, end_date, error = parse_date_range(request.args)
     filter_active = not error and bool(start_date or end_date)
     bounds = {} if error else {"start_date": start_date, "end_date": end_date}

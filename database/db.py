@@ -9,7 +9,15 @@ from werkzeug.security import generate_password_hash
 # ------------------------------------------------------------------ #
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "expense_tracker.db")
+
+
+def _default_db_path():
+    if os.environ.get("VERCEL"):
+        return "/tmp/expense_tracker.db"
+    return os.path.join(BASE_DIR, "expense_tracker.db")
+
+
+DB_PATH = _default_db_path()
 
 CATEGORIES = ["Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other"]
 

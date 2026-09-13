@@ -125,6 +125,11 @@ flowchart TD
   handling, password hashing, and session cookies is future-step work, not a bug to silently fix.
 - Everything runs through Flask's built-in dev server (`app.run(debug=True, port=5001)`) — no
   WSGI/production server config exists.
+- The app is also deployed to Vercel (zero-config Flask, entrypoint `app.py`, no `vercel.json`).
+  There the filesystem is read-only except `/tmp`, so the SQLite database is ephemeral and
+  per-instance: registered users and their data vanish on cold starts and redeploys, and only the
+  seeded demo account is guaranteed. `SECRET_KEY` comes from the Vercel project's environment
+  variables. See `.claude/specs/fix-vercel-deployment.md`.
 
 ## Implemented vs. stub routes (roadmap)
 
@@ -135,7 +140,7 @@ Implemented:
 | `/` | GET | landing page |
 | `/terms`, `/privacy` | GET | static legal pages |
 | `/register` | GET, POST | Step 2 — validates input, hashes password, creates the user |
-| `/login` | GET, POST | Step 3 — verifies the password hash, sets `session["user_id"]` |
+| `/login` | GET, POST | Step 3 — verifies the password hash, sets `session["user_id"]` and `session["user_email"]`; signed-in checks go through `get_current_user()`, which clears stale sessions |
 | `/logout` | GET | Step 3 — clears the session |
 | `/profile` | GET | Steps 4–6 — signed-in only; user card, stats, every transaction and category totals queried from `expenses`, narrowed by optional `?start_date=` / `?end_date=` (Step 6 date filter, validated by `parse_date_range()`) |
 
@@ -151,7 +156,9 @@ Stub (return a plain string, tagged with the step that's meant to implement them
 plus `create_user()` / `get_user_by_email()` / `get_user_by_id()`, and the Step 5 profile queries
 `get_expense_stats()` / `get_category_totals()` / `get_expenses_by_user()`, which all take optional
 inclusive `start_date` / `end_date` ISO-string bounds (Step 6, built by `_date_range_clause()`). The
-`users` and `expenses` tables exist, and `app.py` calls `init_db()` / `seed_db()` at import time. The
+`users` and `expenses` tables exist, and `app.py` calls `init_db()` / `seed_db()` at import time.
+The SQLite file is `expense_tracker.db` in the project root locally, or `/tmp/expense_tracker.db`
+when the `VERCEL` env var is set (chosen by `_default_db_path()`). The
 expense routes above still need their own write helpers (insert/update/delete) added to this module.
 
 Step 6 is the profile date filter (`.claude/specs/06-date-filter.md`). When asked to implement a
