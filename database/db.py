@@ -56,6 +56,15 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ai_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            source TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -201,3 +210,26 @@ def create_expense(user_id, amount, category, date, description=None):
     expense_id = cursor.lastrowid
     conn.close()
     return expense_id
+
+
+# ------------------------------------------------------------------ #
+# AI usage                                                             #
+# ------------------------------------------------------------------ #
+
+def count_ai_requests_today(user_id):
+    conn = get_db()
+    count = conn.execute(
+        "SELECT COUNT(*) FROM ai_requests WHERE user_id = ? AND created_at >= date('now')",
+        (user_id,),
+    ).fetchone()[0]
+    conn.close()
+    return count
+
+
+def log_ai_request(user_id, source):
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO ai_requests (user_id, source) VALUES (?, ?)", (user_id, source)
+    )
+    conn.commit()
+    conn.close()

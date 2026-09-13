@@ -910,6 +910,136 @@ a { color: inherit; text-decoration: none; }
     text-decoration: underline;
 }
 
+/* Autofill */
+
+.autofill-card {
+    background: var(--accent-light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.autofill-title {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 400;
+    color: var(--ink);
+    margin-bottom: 0.25rem;
+}
+
+.autofill-subtitle {
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+    margin-bottom: 1.25rem;
+}
+
+.autofill-notice,
+.autofill-error {
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    margin-bottom: 1.25rem;
+}
+
+.autofill-notice {
+    background: var(--paper-card);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+}
+
+.autofill-error {
+    background: var(--danger-light);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+}
+
+.autofill-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+    margin-bottom: 0.4rem;
+}
+
+.autofill-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* The field takes almost all spare room, so a button that wraps onto its own line goes full width. */
+.autofill-row .form-input,
+.autofill-file {
+    flex: 999 1 12rem;
+    min-width: 0;
+}
+
+.autofill-card .form-input { background: var(--paper-card); }
+
+.autofill-file {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+}
+
+.autofill-file::file-selector-button {
+    margin-right: 0.75rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--paper-card);
+    color: var(--ink-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.autofill-file::file-selector-button:hover { border-color: var(--ink); }
+
+.btn-autofill {
+    flex: 1 0 auto;
+    min-width: 5.5rem;
+    padding: 0.6rem 1.1rem;
+    background: var(--accent);
+    color: var(--paper);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-autofill:hover { background: var(--ink); }
+
+.btn-autofill:disabled {
+    opacity: 0.7;
+    cursor: progress;
+}
+
+.autofill-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1rem 0;
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.autofill-divider::before,
+.autofill-divider::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--border);
+}
+
 /* ------------------------------------------------------------------ */
 /* Legal pages                                                         */
 /* ------------------------------------------------------------------ */

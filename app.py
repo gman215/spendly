@@ -3,11 +3,14 @@ import re
 import sqlite3
 from datetime import date, datetime
 
+from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, session, url_for
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.security import check_password_hash
 
 from database.db import (
     CATEGORIES,
+    count_ai_requests_today,
     create_expense,
     create_user,
     get_category_totals,
@@ -17,11 +20,16 @@ from database.db import (
     get_user_by_email,
     get_user_by_id,
     init_db,
+    log_ai_request,
     seed_db,
 )
+from services import gemini
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+app.config["MAX_CONTENT_LENGTH"] = gemini.MAX_RECEIPT_MB * 1024 * 1024
 
 
 # ------------------------------------------------------------------ #
@@ -124,6 +132,63 @@ def parse_expense_form(form):
         "description": values["description"] or None,
     }
     return values, expense, None
+
+
+def parse_autofill_form(form, files):
+    note = form.get("note", "").strip()
+    receipt = files.get("receipt")
+
+    if receipt and receipt.filename:
+        if receipt.mimetype not in gemini.IMAGE_TYPES:
+            return note, None, "Choose a JPEG, PNG, WebP or HEIC photo."
+        image = receipt.read()
+        if not image:
+            return note, None, "That photo is empty. Choose another one."
+        return note, (image, receipt.mimetype), None
+
+    if not note:
+        return note, None, "Choose a receipt photo or describe the expense."
+    if len(note) > gemini.MAX_NOTE_LENGTH:
+        return note, None, f"Keep the description to {gemini.MAX_NOTE_LENGTH} characters or fewer."
+    return note, None, None
+
+
+def parse_client_today(value):
+    server_today = date.today()
+    try:
+        client_today = datetime.strptime(value.strip(), "%Y-%m-%d").date()
+    except ValueError:
+        return server_today
+
+    # The browser sends its local date so "yesterday" means the user's yesterday, even though the
+    # server clock is UTC on Vercel. A date more than a day away from the server's is ignored.
+    if abs((client_today - server_today).days) > 1:
+        return server_today
+    return client_today
+
+
+def render_expense_form(status=200, **context):
+    context.setdefault("date", date.today().isoformat())
+    page = render_template(
+        "add_expense.html",
+        categories=CATEGORIES,
+        ai_enabled=gemini.is_enabled(),
+        **context,
+    )
+    return page, status
+
+
+# ------------------------------------------------------------------ #
+# Error handlers                                                      #
+# ------------------------------------------------------------------ #
+
+@app.errorhandler(RequestEntityTooLarge)
+def request_too_large(error):
+    if request.path != "/expenses/autofill" or get_current_user() is None:
+        return error
+    return render_expense_form(
+        413, autofill_error=f"Receipt photos must be {gemini.MAX_RECEIPT_MB} MB or smaller."
+    )
 
 
 # ------------------------------------------------------------------ #
@@ -265,18 +330,48 @@ def add_expense():
         return redirect(url_for("login"))
 
     if request.method == "GET":
-        return render_template(
-            "add_expense.html", categories=CATEGORIES, date=date.today().isoformat()
-        )
+        return render_expense_form()
 
     values, expense, error = parse_expense_form(request.form)
     if error:
-        return render_template(
-            "add_expense.html", categories=CATEGORIES, error=error, **values
-        )
+        return render_expense_form(error=error, **values)
 
     create_expense(user["id"], **expense)
     return redirect(url_for("profile", added=1))
+
+
+@app.route("/expenses/autofill", methods=["POST"])
+def autofill_expense():
+    user = get_current_user()
+    if user is None:
+        return redirect(url_for("login"))
+
+    if not gemini.is_enabled():
+        return render_expense_form(
+            error="AI autofill isn't available right now. Add the expense by hand."
+        )
+
+    note, receipt, error = parse_autofill_form(request.form, request.files)
+    if error is None and count_ai_requests_today(user["id"]) >= gemini.DAILY_LIMIT:
+        error = (
+            f"You've used all {gemini.DAILY_LIMIT} AI autofills for today. "
+            "You can still add expenses by hand."
+        )
+    if error:
+        return render_expense_form(autofill_error=error, note=note)
+
+    today = parse_client_today(request.form.get("today", ""))
+    source = "receipt" if receipt else "note"
+    log_ai_request(user["id"], source)
+    try:
+        if receipt:
+            values = gemini.extract_from_receipt(*receipt, today)
+        else:
+            values = gemini.extract_from_note(note, today)
+    except gemini.AutofillError as exc:
+        return render_expense_form(autofill_error=str(exc), note=note)
+
+    return render_expense_form(autofilled=source, note=note, **values)
 
 
 @app.route("/terms")
