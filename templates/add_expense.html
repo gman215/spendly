@@ -12,6 +12,44 @@
             <p class="expense-subtitle">Log what you spent and when</p>
         </div>
 
+        {% if ai_enabled %}
+        <div class="autofill-card">
+            <h2 class="autofill-title">Autofill with Gemini</h2>
+            <p class="autofill-subtitle">Scan a receipt or describe the expense. Gemini fills in the form below, and nothing is saved until you add it.</p>
+
+            {% if autofill_error %}
+            <div class="autofill-error">{{ autofill_error }}</div>
+            {% elif autofilled %}
+            <div class="autofill-notice">
+                Filled in from your {{ "receipt" if autofilled == "receipt" else "description" }}. Check each field, then add the expense.
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/expenses/autofill" enctype="multipart/form-data" data-autofill>
+                <input type="hidden" name="today" value="">
+                <label for="receipt" class="autofill-label">Receipt photo</label>
+                <div class="autofill-row">
+                    <input type="file" id="receipt" name="receipt"
+                           class="autofill-file" accept="image/*" required>
+                    <button type="submit" class="btn-autofill" data-busy-text="Scanning…">Scan</button>
+                </div>
+            </form>
+
+            <p class="autofill-divider">or</p>
+
+            <form method="POST" action="/expenses/autofill" data-autofill>
+                <input type="hidden" name="today" value="">
+                <label for="note" class="autofill-label">Describe it</label>
+                <div class="autofill-row">
+                    <input type="text" id="note" name="note"
+                           class="form-input" placeholder="Spent 23.50 on an Uber yesterday"
+                           maxlength="300" value="{{ note or '' }}" required>
+                    <button type="submit" class="btn-autofill" data-busy-text="Reading…">Fill</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
         <div class="expense-card">
             {% if error %}
             <div class="expense-error">{{ error }}</div>
