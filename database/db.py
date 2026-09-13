@@ -132,31 +132,46 @@ def get_user_by_id(user_id):
 # Expenses                                                             #
 # ------------------------------------------------------------------ #
 
-def get_expense_stats(user_id):
+def _date_range_clause(start_date, end_date):
+    sql = ""
+    params = []
+    if start_date is not None:
+        sql += " AND date >= ?"
+        params.append(start_date)
+    if end_date is not None:
+        sql += " AND date <= ?"
+        params.append(end_date)
+    return sql, params
+
+
+def get_expense_stats(user_id, start_date=None, end_date=None):
+    date_sql, date_params = _date_range_clause(start_date, end_date)
     conn = get_db()
     stats = conn.execute(
         "SELECT COALESCE(SUM(amount), 0) AS total_spent, COUNT(*) AS transaction_count "
-        "FROM expenses WHERE user_id = ?",
-        (user_id,),
+        "FROM expenses WHERE user_id = ?" + date_sql,
+        [user_id] + date_params,
     ).fetchone()
     conn.close()
     return stats
 
 
-def get_category_totals(user_id):
+def get_category_totals(user_id, start_date=None, end_date=None):
+    date_sql, date_params = _date_range_clause(start_date, end_date)
     conn = get_db()
     totals = conn.execute(
         "SELECT category, SUM(amount) AS total FROM expenses "
-        "WHERE user_id = ? GROUP BY category ORDER BY total DESC",
-        (user_id,),
+        "WHERE user_id = ?" + date_sql + " GROUP BY category ORDER BY total DESC",
+        [user_id] + date_params,
     ).fetchall()
     conn.close()
     return totals
 
 
-def get_expenses_by_user(user_id, limit=None):
-    query = "SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC, id DESC"
-    params = [user_id]
+def get_expenses_by_user(user_id, limit=None, start_date=None, end_date=None):
+    date_sql, date_params = _date_range_clause(start_date, end_date)
+    query = "SELECT * FROM expenses WHERE user_id = ?" + date_sql + " ORDER BY date DESC, id DESC"
+    params = [user_id] + date_params
     if limit is not None:
         query += " LIMIT ?"
         params.append(limit)

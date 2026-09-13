@@ -18,16 +18,39 @@
             </div>
         </div>
 
+        <form class="filter-bar" method="get" action="/profile">
+            <div class="filter-field">
+                <label for="start_date" class="filter-label">From</label>
+                <input type="date" id="start_date" name="start_date" class="form-input"
+                       value="{{ start_date or '' }}">
+            </div>
+            <div class="filter-field">
+                <label for="end_date" class="filter-label">To</label>
+                <input type="date" id="end_date" name="end_date" class="form-input"
+                       value="{{ end_date or '' }}">
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn-primary">Apply</button>
+                {% if start_date or end_date %}
+                <a href="/profile" class="btn-ghost">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+
+        {% if error %}
+        <div class="filter-error">{{ error }}</div>
+        {% endif %}
+
         <div class="profile-stats">
             <div class="profile-stat">
                 <span class="profile-stat-label">Total spent</span>
                 <span class="profile-stat-value">${{ stats.total_spent }}</span>
-                <span class="profile-stat-note">all time</span>
+                <span class="profile-stat-note">{{ "in selected range" if filter_active else "all time" }}</span>
             </div>
             <div class="profile-stat">
                 <span class="profile-stat-label">Transactions</span>
                 <span class="profile-stat-value">{{ stats.transaction_count }}</span>
-                <span class="profile-stat-note">logged so far</span>
+                <span class="profile-stat-note">{{ "in selected range" if filter_active else "logged so far" }}</span>
             </div>
             <div class="profile-stat">
                 <span class="profile-stat-label">Top category</span>
@@ -37,7 +60,7 @@
         </div>
 
         <div class="profile-panel">
-            <h2 class="profile-panel-title">Recent transactions</h2>
+            <h2 class="profile-panel-title">Transactions</h2>
             <div class="txn-table-wrap">
                 <table class="txn-table">
                     <thead>
@@ -62,6 +85,9 @@
                     </tbody>
                 </table>
             </div>
+            {% if filter_active and not transactions %}
+            <p class="filter-empty">No expenses in this date range.</p>
+            {% endif %}
         </div>
 
         <div class="profile-panel">
@@ -78,6 +104,9 @@
                 </div>
                 {% endfor %}
             </div>
+            {% if filter_active and not transactions %}
+            <p class="filter-empty">No expenses in this date range.</p>
+            {% endif %}
         </div>
 
     </div>

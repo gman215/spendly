@@ -52,6 +52,30 @@ def month_year(value):
 
 
 # ------------------------------------------------------------------ #
+# Request helpers                                                     #
+# ------------------------------------------------------------------ #
+
+def parse_date_range(args):
+    start_date = args.get("start_date", "").strip()
+    end_date = args.get("end_date", "").strip()
+
+    try:
+        start = datetime.strptime(start_date, "%Y-%m-%d").date() if start_date else None
+        end = datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None
+    except ValueError:
+        return start_date, end_date, "Enter a valid date in YYYY-MM-DD format."
+
+    if start and end and start > end:
+        return start_date, end_date, "Start date must be on or before the end date."
+
+    return (
+        start.isoformat() if start else None,
+        end.isoformat() if end else None,
+        None,
+    )
+
+
+# ------------------------------------------------------------------ #
 # Routes                                                              #
 # ------------------------------------------------------------------ #
 
@@ -133,9 +157,13 @@ def profile():
     if not user_id:
         return redirect(url_for("login"))
 
-    expense_stats = get_expense_stats(user_id)
-    category_rows = get_category_totals(user_id)
-    expense_rows = get_expenses_by_user(user_id, limit=10)
+    start_date, end_date, error = parse_date_range(request.args)
+    filter_active = not error and bool(start_date or end_date)
+    bounds = {} if error else {"start_date": start_date, "end_date": end_date}
+
+    expense_stats = get_expense_stats(user_id, **bounds)
+    category_rows = get_category_totals(user_id, **bounds)
+    expense_rows = get_expenses_by_user(user_id, **bounds)
 
     total_spent = expense_stats["total_spent"]
     max_total = category_rows[0]["total"] if category_rows else 0
@@ -169,6 +197,10 @@ def profile():
         stats=stats,
         transactions=transactions,
         categories=categories,
+        start_date=start_date,
+        end_date=end_date,
+        filter_active=filter_active,
+        error=error,
     )
 
 
