@@ -137,7 +137,7 @@ Implemented:
 | `/register` | GET, POST | Step 2 — validates input, hashes password, creates the user |
 | `/login` | GET, POST | Step 3 — verifies the password hash, sets `session["user_id"]` |
 | `/logout` | GET | Step 3 — clears the session |
-| `/profile` | GET | Step 4 — signed-in only; real user card, hardcoded stats/transactions/categories |
+| `/profile` | GET | Steps 4–5 — signed-in only; user card, stats, recent transactions and category totals queried from `expenses` |
 
 Stub (return a plain string, tagged with the step that's meant to implement them):
 
@@ -148,11 +148,12 @@ Stub (return a plain string, tagged with the step that's meant to implement them
 | `/expenses/<int:id>/delete` | Step 9 | |
 
 `database/db.py` (Step 1 — Database Setup) is implemented: `get_db()`, `init_db()`, `seed_db()`,
-plus `create_user()` / `get_user_by_email()` / `get_user_by_id()`. The `users` and `expenses`
-tables exist, and `app.py` calls `init_db()` / `seed_db()` at import time. The expense routes above
-still need their own query helpers added to this module.
+plus `create_user()` / `get_user_by_email()` / `get_user_by_id()`, and the Step 5 profile queries
+`get_expense_stats()` / `get_category_totals()` / `get_expenses_by_user()`. The `users` and
+`expenses` tables exist, and `app.py` calls `init_db()` / `seed_db()` at import time. The expense
+routes above still need their own write helpers (insert/update/delete) added to this module.
 
-Steps 2, 5, and 6 aren't named anywhere in the code — don't guess what they are; ask or wait for
-an explicit task before inventing routes/features to fill those gaps. When asked to implement a
+Step 6 isn't named anywhere in the code — don't guess what it is; ask or wait for an explicit task
+before inventing routes/features to fill that gap. When asked to implement a
 stub route, do only that step: match the pattern of the already-implemented routes (call into
 `database/db.py`, render a template), and don't jump ahead to later steps.
