@@ -1,11 +1,14 @@
 import os
+import re
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 
 from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 from database.db import (
+    CATEGORIES,
+    create_expense,
     create_user,
     get_category_totals,
     get_db,
@@ -85,6 +88,42 @@ def parse_date_range(args):
         end.isoformat() if end else None,
         None,
     )
+
+
+def parse_expense_form(form):
+    values = {
+        field: form.get(field, "").strip()
+        for field in ("amount", "category", "date", "description")
+    }
+
+    if not values["amount"] or not values["category"] or not values["date"]:
+        return values, None, "Amount, category and date are required."
+
+    amount_ok = re.fullmatch(r"[0-9]+(\.[0-9]{1,2})?", values["amount"])
+    amount = float(values["amount"]) if amount_ok else 0
+    if amount <= 0:
+        return values, None, "Amount must be a number greater than 0 with at most 2 decimal places."
+    if amount > 1000000:
+        return values, None, "Amount must be 1,000,000 or less."
+
+    if values["category"] not in CATEGORIES:
+        return values, None, "Choose a category from the list."
+
+    try:
+        expense_date = datetime.strptime(values["date"], "%Y-%m-%d").date()
+    except ValueError:
+        return values, None, "Enter a valid date in YYYY-MM-DD format."
+
+    if len(values["description"]) > 200:
+        return values, None, "Description must be 200 characters or fewer."
+
+    expense = {
+        "amount": round(amount, 2),
+        "category": values["category"],
+        "date": expense_date.isoformat(),
+        "description": values["description"] or None,
+    }
+    return values, expense, None
 
 
 # ------------------------------------------------------------------ #
@@ -190,7 +229,7 @@ def profile():
     transactions = [
         {
             "date": row["date"],
-            "description": row["description"],
+            "description": row["description"] or "—",
             "category": row["category"],
             "amount": f"{row['amount']:.2f}",
         }
@@ -215,7 +254,29 @@ def profile():
         end_date=end_date,
         filter_active=filter_active,
         error=error,
+        added=request.args.get("added"),
     )
+
+
+@app.route("/expenses/add", methods=["GET", "POST"])
+def add_expense():
+    user = get_current_user()
+    if user is None:
+        return redirect(url_for("login"))
+
+    if request.method == "GET":
+        return render_template(
+            "add_expense.html", categories=CATEGORIES, date=date.today().isoformat()
+        )
+
+    values, expense, error = parse_expense_form(request.form)
+    if error:
+        return render_template(
+            "add_expense.html", categories=CATEGORIES, error=error, **values
+        )
+
+    create_expense(user["id"], **expense)
+    return redirect(url_for("profile", added=1))
 
 
 @app.route("/terms")
@@ -231,11 +292,6 @@ def privacy():
 # ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
-
-@app.route("/expenses/add")
-def add_expense():
-    return "Add expense — coming in Step 7"
-
 
 @app.route("/expenses/<int:id>/edit")
 def edit_expense(id):

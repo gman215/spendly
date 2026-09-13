@@ -18,6 +18,10 @@
             </div>
         </div>
 
+        {% if added %}
+        <div class="profile-notice">Expense added.</div>
+        {% endif %}
+
         <form class="filter-bar" method="get" action="/profile">
             <div class="filter-field">
                 <label for="start_date" class="filter-label">From</label>
@@ -60,7 +64,10 @@
         </div>
 
         <div class="profile-panel">
-            <h2 class="profile-panel-title">Transactions</h2>
+            <div class="profile-panel-head">
+                <h2 class="profile-panel-title">Transactions</h2>
+                <a href="/expenses/add" class="btn-primary">Add expense</a>
+            </div>
             <div class="txn-table-wrap">
                 <table class="txn-table">
                     <thead>
